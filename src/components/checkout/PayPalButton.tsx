@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 
 interface PayPalButtonProps {
   onSuccess: () => void;
+  clientId?: string; // Optional client ID prop
 }
 
 declare global {
@@ -11,7 +12,7 @@ declare global {
   }
 }
 
-const PayPalButton = ({ onSuccess }: PayPalButtonProps) => {
+const PayPalButton = ({ onSuccess, clientId = "sb" }: PayPalButtonProps) => {
   const [loading, setLoading] = useState(true);
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +26,7 @@ const PayPalButton = ({ onSuccess }: PayPalButtonProps) => {
     }
 
     const script = document.createElement('script');
-    script.src = "https://www.paypal.com/sdk/js?client-id=sb&currency=USD";
+    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD`;
     script.async = true;
     script.onload = () => {
       console.log("PayPal SDK loaded successfully");
@@ -46,7 +47,7 @@ const PayPalButton = ({ onSuccess }: PayPalButtonProps) => {
         document.body.removeChild(script);
       }
     };
-  }, []);
+  }, [clientId]);
 
   useEffect(() => {
     if (scriptLoaded && window.paypal) {

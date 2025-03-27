@@ -21,6 +21,9 @@ const CartSummary = ({
   onPaymentSuccess,
   setShowCheckoutForm
 }: CartSummaryProps) => {
+  // Your PayPal sandbox client ID
+  const paypalClientId = "YOUR_SANDBOX_CLIENT_ID"; // Replace this with your actual sandbox client ID
+  
   return (
     <div className="bg-white rounded-xl shadow-sm p-6 sticky top-24">
       <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
@@ -81,7 +84,10 @@ const CartSummary = ({
           {customerInfo && (
             <>
               <p className="text-center text-sm text-muted-foreground mb-4">or</p>
-              <PayPalButton onSuccess={onPaymentSuccess} />
+              <PayPalButton 
+                onSuccess={onPaymentSuccess} 
+                clientId={paypalClientId}
+              />
             </>
           )}
         </>
