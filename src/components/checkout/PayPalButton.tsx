@@ -1,9 +1,12 @@
 
 import React, { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { toast } from "sonner";
 
 interface PayPalButtonProps {
   onSuccess: () => void;
   clientId?: string; // Optional client ID prop
+  amount?: number; // Optional amount to display
 }
 
 declare global {
@@ -12,12 +15,13 @@ declare global {
   }
 }
 
-const PayPalButton = ({ onSuccess, clientId = "sb" }: PayPalButtonProps) => {
+const PayPalButton = ({ onSuccess, clientId = "sb", amount = 0 }: PayPalButtonProps) => {
   const [loading, setLoading] = useState(true);
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  useEffect(() => {
+  const loadPayPalScript = () => {
     // Check if PayPal script is already loaded
     if (window.paypal) {
       setScriptLoaded(true);
@@ -25,8 +29,14 @@ const PayPalButton = ({ onSuccess, clientId = "sb" }: PayPalButtonProps) => {
       return;
     }
 
+    // Remove any existing PayPal scripts to avoid conflicts
+    const existingScript = document.querySelector('script[src*="paypal.com/sdk/js"]');
+    if (existingScript) {
+      document.body.removeChild(existingScript);
+    }
+
     const script = document.createElement('script');
-    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD`;
+    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD&disable-funding=credit,card`;
     script.async = true;
     script.onload = () => {
       console.log("PayPal SDK loaded successfully");
@@ -37,17 +47,30 @@ const PayPalButton = ({ onSuccess, clientId = "sb" }: PayPalButtonProps) => {
       console.error("Failed to load PayPal SDK");
       setError("Failed to load PayPal payment system");
       setLoading(false);
+      
+      // Only retry a few times to avoid infinite loops
+      if (retryCount < 2) {
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+          loadPayPalScript();
+        }, 2000);
+      }
     };
     
     document.body.appendChild(script);
+  };
+
+  useEffect(() => {
+    loadPayPalScript();
     
     return () => {
       // Clean up if component unmounts
-      if (document.body.contains(script)) {
+      const script = document.querySelector('script[src*="paypal.com/sdk/js"]');
+      if (script && document.body.contains(script)) {
         document.body.removeChild(script);
       }
     };
-  }, [clientId]);
+  }, [clientId, retryCount]);
 
   useEffect(() => {
     if (scriptLoaded && window.paypal) {
@@ -57,6 +80,13 @@ const PayPalButton = ({ onSuccess, clientId = "sb" }: PayPalButtonProps) => {
           paypalButtonContainer.innerHTML = '';
           
           window.paypal.Buttons({
+            style: {
+              layout: 'vertical',
+              color: 'gold',
+              shape: 'rect',
+              label: 'paypal'
+            },
+            
             // Set up the transaction
             createOrder: function() {
               return fetch('/api/create-paypal-order', {
@@ -65,30 +95,48 @@ const PayPalButton = ({ onSuccess, clientId = "sb" }: PayPalButtonProps) => {
                   'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                  intent: 'CAPTURE'
+                  intent: 'CAPTURE',
+                  amount: amount
                 })
               }).then(function(res) {
-                // For demo purposes, we'll simulate a successful order creation
-                console.log('Creating sandbox PayPal order');
-                // Return a dummy order ID for sandbox
+                // For sandbox testing, we'll simulate a successful order creation
+                console.log('Creating sandbox PayPal order for amount:', amount);
+                
+                // In a real integration, you would parse the response and return the order ID
+                // For sandbox/demo, we're returning a dummy ID
                 return 'SANDBOX_ORDER_ID_' + Date.now();
+              }).catch(function(err) {
+                console.error('Error creating order:', err);
+                toast.error('Could not create PayPal order');
+                return null;
               });
             },
             
             // Finalize the transaction
             onApprove: function(data: any, actions: any) {
               console.log('PayPal transaction approved', data);
-              // Simulate server call to capture funds
+              
+              // In a real integration, you would call your server to capture the payment
+              // For sandbox, we'll simulate a successful capture
+              toast.success('Payment processed successfully!');
+              
               setTimeout(() => {
                 console.log('Payment completed successfully');
                 onSuccess();
               }, 1000);
+              
               return true;
+            },
+            
+            onCancel: function() {
+              console.log('Transaction cancelled');
+              toast.info('PayPal checkout cancelled');
             },
             
             onError: function(err: any) {
               console.error('PayPal error:', err);
               setError('There was an error processing your payment');
+              toast.error('PayPal checkout error');
             }
           }).render('#paypal-button-container');
         }
@@ -97,18 +145,27 @@ const PayPalButton = ({ onSuccess, clientId = "sb" }: PayPalButtonProps) => {
         setError('Could not initialize PayPal checkout');
       }
     }
-  }, [scriptLoaded, onSuccess]);
+  }, [scriptLoaded, onSuccess, amount]);
+
+  const handleRetry = () => {
+    setError(null);
+    setLoading(true);
+    setScriptLoaded(false);
+    setRetryCount(0);
+    loadPayPalScript();
+  };
 
   if (error) {
     return (
       <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
         <p>{error}</p>
-        <button 
-          onClick={() => window.location.reload()}
-          className="text-sm underline mt-2"
+        <Button 
+          onClick={handleRetry}
+          variant="outline"
+          className="text-sm mt-2"
         >
           Try again
-        </button>
+        </Button>
       </div>
     );
   }

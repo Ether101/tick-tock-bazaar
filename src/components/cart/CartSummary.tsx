@@ -21,8 +21,8 @@ const CartSummary = ({
   onPaymentSuccess,
   setShowCheckoutForm
 }: CartSummaryProps) => {
-  // Your PayPal sandbox client ID
-  const paypalClientId = "YOUR_SANDBOX_CLIENT_ID"; // Replace this with your actual sandbox client ID
+  // Replace this with your actual sandbox client ID from your PayPal Developer account
+  const paypalClientId = "sb"; // Using "sb" for sandbox testing, replace with your actual sandbox client ID
   
   return (
     <div className="bg-white rounded-xl shadow-sm p-6 sticky top-24">
@@ -87,6 +87,7 @@ const CartSummary = ({
               <PayPalButton 
                 onSuccess={onPaymentSuccess} 
                 clientId={paypalClientId}
+                amount={cartTotal}
               />
             </>
           )}
