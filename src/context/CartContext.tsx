@@ -2,6 +2,7 @@
 import React, { createContext, useState, useContext } from 'react';
 import { WatchProduct } from './ProductContext';
 import { toast } from "sonner";
+import { CheckoutFormValues } from '../components/CheckoutForm';
 
 export type CartItem = {
   product: WatchProduct;
@@ -15,6 +16,7 @@ type Order = {
   date: Date;
   status: 'pending' | 'completed' | 'cancelled';
   paymentMethod: string;
+  customerInfo?: CheckoutFormValues;
 };
 
 type CartContextType = {
@@ -25,7 +27,7 @@ type CartContextType = {
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
   cartTotal: number;
-  checkout: (paymentMethod: string) => void;
+  checkout: (paymentMethod: string, customerInfo?: CheckoutFormValues) => void;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -112,7 +114,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLocalStorageData('cartItems', []);
   };
 
-  const checkout = (paymentMethod: string) => {
+  const checkout = (paymentMethod: string, customerInfo?: CheckoutFormValues) => {
     if (cartItems.length === 0) {
       toast.error("Your cart is empty");
       return;
@@ -124,7 +126,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       total: cartTotal,
       date: new Date(),
       status: 'completed',
-      paymentMethod
+      paymentMethod,
+      customerInfo
     };
 
     setOrders(prevOrders => {

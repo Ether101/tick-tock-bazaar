@@ -6,6 +6,7 @@ import { ArrowLeft, Plus, Minus, Trash2, ArrowRight } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import CheckoutForm, { CheckoutFormValues } from '../components/CheckoutForm';
 
 // PayPal Button component
 const PayPalButton = ({ onSuccess }: { onSuccess: () => void }) => {
@@ -52,13 +53,25 @@ const Cart = () => {
   const { cartItems, removeFromCart, updateQuantity, cartTotal, checkout } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCheckoutComplete, setIsCheckoutComplete] = useState(false);
+  const [showCheckoutForm, setShowCheckoutForm] = useState(false);
+  const [customerInfo, setCustomerInfo] = useState<CheckoutFormValues | null>(null);
   const navigate = useNavigate();
   
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
   
+  const handleCheckoutFormSubmit = (values: CheckoutFormValues) => {
+    setCustomerInfo(values);
+    setShowCheckoutForm(false);
+  };
+  
   const handlePaymentSuccess = () => {
+    if (!customerInfo) {
+      setShowCheckoutForm(true);
+      return;
+    }
+    
     setIsProcessing(true);
     
     // Simulate payment processing
@@ -218,57 +231,87 @@ const Cart = () => {
               </div>
             </div>
             
-            {/* Order Summary */}
+            {/* Order Summary and Checkout */}
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-xl shadow-sm p-6 sticky top-24">
-                <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
-                
-                <div className="space-y-3 mb-6">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>${cartTotal.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Shipping</span>
-                    <span>Free</span>
-                  </div>
+              {showCheckoutForm ? (
+                <div className="bg-white rounded-xl shadow-sm p-6 sticky top-24">
+                  <h2 className="text-lg font-semibold mb-4">Customer Information</h2>
+                  <CheckoutForm 
+                    onSubmit={handleCheckoutFormSubmit} 
+                    isProcessing={isProcessing} 
+                  />
                 </div>
-                
-                <div className="border-t pt-4 mb-6">
-                  <div className="flex justify-between font-semibold text-lg">
-                    <span>Total</span>
-                    <span>${cartTotal.toLocaleString()}</span>
+              ) : (
+                <div className="bg-white rounded-xl shadow-sm p-6 sticky top-24">
+                  <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
+                  
+                  <div className="space-y-3 mb-6">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span>${cartTotal.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Shipping</span>
+                      <span>Free</span>
+                    </div>
                   </div>
+                  
+                  <div className="border-t pt-4 mb-6">
+                    <div className="flex justify-between font-semibold text-lg">
+                      <span>Total</span>
+                      <span>${cartTotal.toLocaleString()}</span>
+                    </div>
+                  </div>
+                  
+                  {customerInfo ? (
+                    <div className="mb-6 border p-3 rounded-lg bg-gray-50">
+                      <h3 className="font-medium mb-2">Shipping to:</h3>
+                      <p className="text-sm">{customerInfo.fullName}</p>
+                      <p className="text-sm">{customerInfo.address}</p>
+                      <p className="text-sm">{customerInfo.city}, {customerInfo.postalCode}</p>
+                      <p className="text-sm">{customerInfo.country}</p>
+                      <p className="text-sm">{customerInfo.phone}</p>
+                      <button 
+                        onClick={() => setShowCheckoutForm(true)}
+                        className="text-sm text-accent hover:underline mt-2"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  ) : null}
+                  
+                  {isProcessing ? (
+                    <div className="w-full py-3 bg-black/80 text-white rounded-lg text-center flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing Payment...
+                    </div>
+                  ) : (
+                    <>
+                      <button 
+                        className="w-full py-3 bg-black text-white rounded-lg hover:bg-accent transition-colors mb-4 flex items-center justify-center gap-2"
+                        onClick={handlePaymentSuccess}
+                      >
+                        {customerInfo ? 'Proceed to Payment' : 'Checkout'}
+                        <ArrowRight size={16} />
+                      </button>
+                      
+                      {customerInfo && (
+                        <>
+                          <p className="text-center text-sm text-muted-foreground mb-4">or</p>
+                          <PayPalButton onSuccess={handlePaymentSuccess} />
+                        </>
+                      )}
+                    </>
+                  )}
+                  
+                  <p className="text-xs text-muted-foreground text-center mt-4">
+                    By completing your purchase, you agree to our <a href="#" className="text-accent hover:underline">Terms of Service</a> and <a href="#" className="text-accent hover:underline">Privacy Policy</a>.
+                  </p>
                 </div>
-                
-                {isProcessing ? (
-                  <div className="w-full py-3 bg-black/80 text-white rounded-lg text-center flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Processing Payment...
-                  </div>
-                ) : (
-                  <>
-                    <button 
-                      className="w-full py-3 bg-black text-white rounded-lg hover:bg-accent transition-colors mb-4 flex items-center justify-center gap-2"
-                      onClick={handlePaymentSuccess}
-                    >
-                      Checkout
-                      <ArrowRight size={16} />
-                    </button>
-                    
-                    <p className="text-center text-sm text-muted-foreground mb-4">or</p>
-                    
-                    <PayPalButton onSuccess={handlePaymentSuccess} />
-                  </>
-                )}
-                
-                <p className="text-xs text-muted-foreground text-center mt-4">
-                  By completing your purchase, you agree to our <a href="#" className="text-accent hover:underline">Terms of Service</a> and <a href="#" className="text-accent hover:underline">Privacy Policy</a>.
-                </p>
-              </div>
+              )}
             </div>
           </div>
         </div>
