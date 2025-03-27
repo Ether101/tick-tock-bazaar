@@ -7,6 +7,7 @@ import { useCart } from '../context/CartContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import CheckoutForm, { CheckoutFormValues } from '../components/CheckoutForm';
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 // PayPal Button component
 const PayPalButton = ({ onSuccess }: { onSuccess: () => void }) => {
@@ -55,6 +56,7 @@ const Cart = () => {
   const [isCheckoutComplete, setIsCheckoutComplete] = useState(false);
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
   const [customerInfo, setCustomerInfo] = useState<CheckoutFormValues | null>(null);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -64,6 +66,32 @@ const Cart = () => {
   const handleCheckoutFormSubmit = (values: CheckoutFormValues) => {
     setCustomerInfo(values);
     setShowCheckoutForm(false);
+  };
+  
+  const handleCardPaymentSuccess = (values: CheckoutFormValues) => {
+    setIsProcessing(true);
+    
+    // Simulate payment processing
+    setTimeout(() => {
+      checkout('Credit Card', { ...customerInfo, ...values });
+      setIsProcessing(false);
+      setShowPaymentDialog(false);
+      setIsCheckoutComplete(true);
+      
+      // Redirect to order history after a delay
+      setTimeout(() => {
+        navigate('/order-history');
+      }, 3000);
+    }, 1500);
+  };
+  
+  const handleProceedToPayment = () => {
+    if (!customerInfo) {
+      setShowCheckoutForm(true);
+      return;
+    }
+    
+    setShowPaymentDialog(true);
   };
   
   const handlePaymentSuccess = () => {
@@ -76,7 +104,7 @@ const Cart = () => {
     
     // Simulate payment processing
     setTimeout(() => {
-      checkout('PayPal');
+      checkout('PayPal', customerInfo);
       setIsProcessing(false);
       setIsCheckoutComplete(true);
       
@@ -292,7 +320,7 @@ const Cart = () => {
                     <>
                       <button 
                         className="w-full py-3 bg-black text-white rounded-lg hover:bg-accent transition-colors mb-4 flex items-center justify-center gap-2"
-                        onClick={handlePaymentSuccess}
+                        onClick={handleProceedToPayment}
                       >
                         {customerInfo ? 'Proceed to Payment' : 'Checkout'}
                         <ArrowRight size={16} />
@@ -316,6 +344,20 @@ const Cart = () => {
           </div>
         </div>
       </main>
+      
+      {/* Credit Card Payment Dialog */}
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogTitle>Enter Payment Details</DialogTitle>
+          <div className="py-4">
+            <CheckoutForm 
+              onSubmit={handleCardPaymentSuccess} 
+              isProcessing={isProcessing} 
+              includePaymentFields={true}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
       
       <Footer />
     </div>
